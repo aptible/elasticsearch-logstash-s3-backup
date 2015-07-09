@@ -1,0 +1,1 @@
+cron: crond && tail -F /var/log/cron.log

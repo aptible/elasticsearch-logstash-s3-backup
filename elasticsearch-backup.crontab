@@ -1,0 +1,1 @@
+0 2 * * * set -a && . /opt/script/.aptible.env && /bin/bash /opt/script/backup-all-indexes.sh >> /var/log/cron.log 2>&1
