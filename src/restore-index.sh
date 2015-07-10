@@ -8,4 +8,4 @@ if [ -z "$1" ]; then
 fi
 
 REPOSITORY_URL=${DATABASE_URL}/_snapshot/${REPOSITORY_NAME}
-curl -XPOST ${REPOSITORY_URL}/$1/_restore
+curl -w "\n" -XPOST ${REPOSITORY_URL}/$1/_restore

@@ -17,42 +17,45 @@ backup_index ()
   local SNAPSHOT_URL=${REPOSITORY_URL}/${INDEX_NAME}
   local INDEX_URL=${DATABASE_URL}/${INDEX_NAME}
 
-  grep -q SUCCESS <(curl ${SNAPSHOT_URL} 2>/dev/null)
+  grep -q SUCCESS <(curl -sS ${SNAPSHOT_URL})
   if [ $? -ne 0 ]; then
     echo "Scheduling snapshot."
-    curl --fail -w "\n" -XPUT ${SNAPSHOT_URL} -d "{
+    curl --fail -w "\n" -sS -XPUT ${SNAPSHOT_URL} -d "{
       \"indices\": \"${INDEX_NAME}\",
       \"include_global_state\": false
     }" || return 1
 
     echo "Waiting for snapshot to finish..."
-    timeout "${WAIT_SECONDS}" bash -c "until grep -q SUCCESS <(curl ${SNAPSHOT_URL} 2>/dev/null); do sleep 1; done" || return 1
+    timeout "${WAIT_SECONDS}" bash -c "until grep -q SUCCESS <(curl -sS ${SNAPSHOT_URL}); do sleep 1; done" || return 1
   fi
 
   echo "Deleting ${INDEX_NAME} from Elasticsearch."
-  curl -w "\n" -XDELETE ${INDEX_URL}
+  curl -w "\n" -sS -XDELETE ${INDEX_URL}
 }
 
-# Ensure that the snapshot repository exists.
-REPO_EXISTS=$(curl -s -o /dev/null -w "%{http_code}" ${REPOSITORY_URL})
-if [ "$REPO_EXISTS" != 200 ]; then
-  echo "Creating repository ${REPOSITORY_NAME} to store snapshots..."
-  curl -w "\n" -XPUT ${REPOSITORY_URL} -d "{
-    \"type\": \"s3\",
-    \"settings\": {
-      \"bucket\" : \"${S3_BUCKET}\",
-      \"access_key\": \"${S3_ACCESS_KEY_ID}\",
-      \"secret_key\": \"${S3_SECRET_ACCESS_KEY}\",
-      \"region\": \"${S3_REGION}\",
-      \"protocol\": \"https\",
-      \"server_side_encryption\": true
-    }
-  }"
+# Ensure that Elasticsearch has the cloud-aws plugin.
+grep -q cloud-aws <(curl -sS ${DATABASE_URL}/_cat/plugins)
+if [ $? -ne 0 ]; then
+  echo "Elasticsearch server does not have cloud-aws plugin installed. Exiting."
+  exit 1
 fi
+
+echo "Ensuring Elasticsearch snapshot repository ${REPOSITORY_NAME} exists..."
+curl -w "\n" -sS -XPUT ${REPOSITORY_URL} -d "{
+  \"type\": \"s3\",
+  \"settings\": {
+    \"bucket\" : \"${S3_BUCKET}\",
+    \"access_key\": \"${S3_ACCESS_KEY_ID}\",
+    \"secret_key\": \"${S3_SECRET_ACCESS_KEY}\",
+    \"region\": \"${S3_REGION}\",
+    \"protocol\": \"https\",
+    \"server_side_encryption\": true
+  }
+}"
 
 CUTOFF_DATE=$(date --date="${MAX_DAYS_TO_KEEP} days ago" +"%Y.%m.%d")
 echo "Archiving all indexes with logs before ${CUTOFF_DATE}."
-for index_name in $(curl ${DATABASE_URL}/_cat/indices/logstash-* 2>/dev/null | cut -d' ' -f3); do
+for index_name in $(curl -sS ${DATABASE_URL}/_cat/indices/logstash-* | cut -d' ' -f3); do
   if [[ "${index_name:9}" < "${CUTOFF_DATE}" ]]; then
       echo "Ensuring ${index_name} is archived..."
       backup_index ${index_name}
@@ -63,3 +66,4 @@ for index_name in $(curl ${DATABASE_URL}/_cat/indices/logstash-* 2>/dev/null | c
       fi
   fi
 done
+echo "Finished archiving."

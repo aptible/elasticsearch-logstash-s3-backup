@@ -1,1 +1,1 @@
-cron: crond && tail -F /var/log/cron.log
+cron: /bin/bash /opt/app/src/run-cron.sh

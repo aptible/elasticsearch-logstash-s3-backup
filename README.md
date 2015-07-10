@@ -11,11 +11,23 @@ Elasticsearch snapshot in your S3 snapshot repository.
 
 Recommended setup for running as an app on Aptible:
 
- 1. Create an S3 bucket for your logs in the same region as your Elasticsearch
+ 1. Make sure your Elasticsearch instance has the
+    [cloud-aws plugin](https://github.com/elastic/elasticsearch-cloud-aws)
+    installed. You can check that it's installed by running:
+
+    ```
+    grep cloud-aws <(curl ${ELASTICSEARCH_URL}/_cat/plugins 2>/dev/null)
+    ```
+
+    If that command prints nothing, you need to [find the appropriate plugin
+    version for your server](https://github.com/elastic/elasticsearch-cloud-aws#aws-cloud-plugin-for-elasticsearch)
+    and install it.
+
+ 2. Create an S3 bucket for your logs in the same region as your Elasticsearch
     database.
 
- 2. Create an IAM user to run the backup and restore. Give your IAM user
-    permission to read/write from the bucket you created in step 1. The
+ 3. Create an IAM user to run the backup and restore. Give your IAM user
+    permission to read/write from the bucket you created in step 2. The
     elasticsearch-cloud-aws plugin documentation has [instructions on setting
     up these permissions](https://github.com/elastic/elasticsearch-cloud-aws/tree/v2.5.1/#recommended-s3-permissions);
     adding the following as an inline custom policy should be sufficient
@@ -55,24 +67,33 @@ Recommended setup for running as an app on Aptible:
 
     ```
 
- 3. Create an app in your [Aptible dashboard](https://dashboard.aptible.com) for
-    the cron. In the steps that follow, we'll use &lt;YOUR_APP_HANDLE&gt;
-    anywhere that you should substitute the actual app handle the results from
-    this step in the instructions.
+ 4. Create an app in your Aptible account for the cron. You can do this through
+    the [Aptible dashboard](https://dashboard.aptible.com) or using the
+    [Aptible CLI](https://github.com/aptible/aptible-cli):
 
- 4. Use the [Aptible CLI](https://github.com/aptible/aptible-cli) to set the
-    following environment variables in your app:
+    ```
+    aptible apps:create YOUR_APP_HANDLE
+    ```
+
+    In the steps that follow, we'll use &lt;YOUR_APP_HANDLE&gt; anywhere that
+    you should substitute the actual app handle you've specified in this step.
+
+ 5. Set the following environment variables in your app's configuration:
 
      * `DATABASE_URL`: Your Elasticsearch URL.
      * `S3_BUCKET`: Your S3 Bucket name.
-     * `S3_ACCESS_KEY_ID`: The access key you generated in step 2.
-     * `S3_SECRET_ACCESS_KEY`: The secret key you generated in step 2.
+     * `S3_ACCESS_KEY_ID`: The access key you generated in step 3.
+     * `S3_SECRET_ACCESS_KEY`: The secret key you generated in step 3.
 
-    In addition, the following environment variables are optional:
+    You may also wish to override any of the following optional environment
+    variables:
 
      * `MAX_DAYS_TO_KEEP`: The number of days of live logstash indexes you'd
        like to keep in your Elasticsearch instance. Any indexes from before this
        point will be archived by the cron. Defaults to 30.
+     * `CRON_SCHEDULE`: The schedule for your backups. Defaults to "0 2 * * *",
+       which runs nightly at 2 A.M. Make sure to escape any asterisks when
+       setting this variable from the command line to avoid shell expansion.
      * `S3_REGION`: The region your Elasticsearch instance and S3 bucket live in.
        Defaults to `us-east-1`.
      * `REPOSITORY_NAME`: The name of your Elasticsearch snapshot repo. This is
@@ -87,7 +108,7 @@ Recommended setup for running as an app on Aptible:
     aptible config:set NAME=VALUE --app YOUR_APP_HANDLE
     ```
 
- 5. Clone this repository and push it to your Aptible app:
+ 6. Clone this repository and push it to your Aptible app:
 
     ```
     git clone https://github.com/aptible/elasticsearch-logstash-s3-backup.git
@@ -100,28 +121,31 @@ Recommended setup for running as an app on Aptible:
 
 The cron run by this app will execute daily and log its progress to stdout.
 
+To test the backup or run it manually, use the Aptible CLI to run the
+`backup-all-indexes.sh` script in a container over SSH:
+
+```
+aptible ssh --app YOUR_APP_HANDLE ./backup-all-indexes.sh
+```
+
 To restore an index, you can use the `restore-index.sh` script included in this
-repository. Just use the Aptible CLI to SSH into an app container:
+repository with the Aptible CLI. For example, to load the index for July 10, 2015,
+run:
 
 ```
-aptible ssh --app YOUR_APP_HANDLE
-```
-
-And, from there, run `restore-index.sh` with the name of the index you want to
-restore, for example:
-
-```
-# /bin/bash /opt/scripts/restore-index.sh logstash-2015-07-09
+aptible ssh --app YOUR_APP_HANDLE ./restore-index.sh logstash-2015-07-10
 ```
 
 This will load the index back into your Elasticsearch instance. Note that if
 you load an archived index into the same instance that you are running this
 cron against, the index will get removed at the end of the day. Alternatively,
 you can load the index into a different Elasticsearch instance by overriding
-the `DATABASE_URL` environment variable:
+the `DATABASE_URL` environment variable in an SSH session before you run the
+restore script:
 
 ```
-# DATABASE_URL=https://some-other-elasticsearch /bin/bash /opt/scripts/restory-index.sh logstash-2015-07-09
+$ aptible ssh --app YOUR_APP_HANDLE bash
+bash-4.3# DATABASE_URL=https://some-other-elasticsearch ./restore-index.sh logstash-2015-07-09
 ```
 
 ## Copyright and License
