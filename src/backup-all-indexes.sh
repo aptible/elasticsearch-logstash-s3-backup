@@ -55,7 +55,8 @@ curl -w "\n" -sS -XPUT ${REPOSITORY_URL} -d "{
 
 CUTOFF_DATE=$(date --date="${MAX_DAYS_TO_KEEP} days ago" +"%Y.%m.%d")
 echo "Archiving all indexes with logs before ${CUTOFF_DATE}."
-for index_name in $(curl -sS ${DATABASE_URL}/_cat/indices/logstash-* | cut -d' ' -f3); do
+SUBSTITUTION='s/.*\(logstash-[0-9\.]\{10\}\).*/\1/'
+for index_name in $(curl -sS ${DATABASE_URL}/_cat/indices | grep logstash- | sed $SUBSTITUTION); do
   if [[ "${index_name:9}" < "${CUTOFF_DATE}" ]]; then
       echo "Ensuring ${index_name} is archived..."
       backup_index ${index_name}
