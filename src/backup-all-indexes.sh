@@ -20,6 +20,10 @@ backup_index ()
   grep -q SUCCESS <(curl -sS ${SNAPSHOT_URL})
   if [ $? -ne 0 ]; then
     echo "Scheduling snapshot."
+    # If the snapshot previously failed, delete it so that we can try again.
+    grep -q FAILED <(curl -sS ${SNAPSHOT_URL}) && curl -sS -XDELETE ${SNAPSHOT_URL}
+    # Indexes have to be open for snapshots to work.
+    curl -sS -XPOST "${INDEX_URL}/_open"
     curl --fail -w "\n" -sS -XPUT ${SNAPSHOT_URL} -d "{
       \"indices\": \"${INDEX_NAME}\",
       \"include_global_state\": false
