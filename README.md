@@ -82,6 +82,7 @@ Recommended setup for running as an app on Aptible:
 
      * `DATABASE_URL`: Your Elasticsearch URL.
      * `S3_BUCKET`: Your S3 Bucket name.
+     * `S3_BUCKET_BASE_PATH`: Destination path within bucket (Optional)
      * `S3_ACCESS_KEY_ID`: The access key you generated in step 3.
      * `S3_SECRET_ACCESS_KEY`: The secret key you generated in step 3.
 

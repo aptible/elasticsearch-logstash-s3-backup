@@ -49,6 +49,7 @@ curl -w "\n" -sS -XPUT ${REPOSITORY_URL} -d "{
   \"type\": \"s3\",
   \"settings\": {
     \"bucket\" : \"${S3_BUCKET}\",
+    \"base_path\": \"${S3_BUCKET_BASE_PATH}\",
     \"access_key\": \"${S3_ACCESS_KEY_ID}\",
     \"secret_key\": \"${S3_SECRET_ACCESS_KEY}\",
     \"region\": \"${S3_REGION}\",
