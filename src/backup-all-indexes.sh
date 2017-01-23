@@ -8,18 +8,15 @@ echo "$NOW: backup-all-indexes.sh - Verifying required environment variables"
 : ${S3_BUCKET:?"Error: S3_BUCKET environment variable not set"}
 : ${S3_ACCESS_KEY_ID:?"Error: S3_ACCESS_KEY_ID environment variable not set"}
 : ${S3_SECRET_ACCESS_KEY:?"Error: S3_SECRET_ACCESS_KEY environment variable not set"}
+
+# Normalize DATABASE_URL by removing the trailing slash.
+DATABASE_URL="${DATABASE_URL%/}"
+
 S3_REGION=${S3_REGION:-us-east-1}
 REPOSITORY_NAME=${REPOSITORY_NAME:-logstash_snapshots}
 WAIT_SECONDS=${WAIT_SECONDS:-1800}
 MAX_DAYS_TO_KEEP=${MAX_DAYS_TO_KEEP:-30}
 REPOSITORY_URL=${DATABASE_URL}/_snapshot/${REPOSITORY_NAME}
-
-LAST_CHAR_IN_DB_URL=$((${#DATABASE_URL}-1))
-
-if [ "${DATABASE_URL:$LAST_CHAR_IN_DB_URL:1}" = "/" ]; then
-    echo "The DATABASE_URL environment variable must not end in a slash: $DATABASE_URL" >&2
-    exit 1
-fi
 
 ES_VERSION=$(curl -sS $DATABASE_URL?format=yaml | grep number | cut -d'"' -f2)
 ES_VERSION_COMPARED_TO_50=$(apk version -t "$ES_VERSION" "4.9")
