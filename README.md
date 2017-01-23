@@ -11,22 +11,10 @@ Elasticsearch snapshot in your S3 snapshot repository.
 
 Recommended setup for running as an app on Aptible:
 
- 1. Make sure your Elasticsearch instance has the
-    [cloud-aws plugin](https://github.com/elastic/elasticsearch-cloud-aws)
-    installed. You can check that it's installed by running:
-
-    ```
-    grep cloud-aws <(curl ${ELASTICSEARCH_URL}/_cat/plugins 2>/dev/null)
-    ```
-
-    If that command prints nothing, you need to [find the appropriate plugin
-    version for your server](https://github.com/elastic/elasticsearch-cloud-aws#aws-cloud-plugin-for-elasticsearch)
-    and install it.
-
- 2. Create an S3 bucket for your logs in the same region as your Elasticsearch
+ 1. Create an S3 bucket for your logs in the same region as your Elasticsearch
     database.
 
- 3. Create an IAM user to run the backup and restore. Give your IAM user
+ 2. Create an IAM user to run the backup and restore. Give your IAM user
     permission to read/write from the bucket you created in step 2. The
     elasticsearch-cloud-aws plugin documentation has [instructions on setting
     up these permissions](https://github.com/elastic/elasticsearch-cloud-aws/tree/v2.5.1/#recommended-s3-permissions);
@@ -67,7 +55,7 @@ Recommended setup for running as an app on Aptible:
 
     ```
 
- 4. Create an app in your Aptible account for the cron. You can do this through
+ 3. Create an app in your Aptible account for the cron. You can do this through
     the [Aptible dashboard](https://dashboard.aptible.com) or using the
     [Aptible CLI](https://github.com/aptible/aptible-cli):
 
@@ -78,7 +66,7 @@ Recommended setup for running as an app on Aptible:
     In the steps that follow, we'll use &lt;YOUR_APP_HANDLE&gt; anywhere that
     you should substitute the actual app handle you've specified in this step.
 
- 5. Set the following environment variables in your app's configuration:
+ 4. Set the following environment variables in your app's configuration:
 
      * `DATABASE_URL`: Your Elasticsearch URL.
      * `S3_BUCKET`: Your S3 Bucket name.
@@ -106,10 +94,10 @@ Recommended setup for running as an app on Aptible:
     Environment variables can be set using the Aptible CLI, for example:
 
     ```
-    aptible config:set NAME=VALUE --app YOUR_APP_HANDLE
+    aptible config:set  --app YOUR_APP_HANDLE NAME=VALUE OTHER_NAME=OTHER_VALUE
     ```
 
- 6. Clone this repository and push it to your Aptible app:
+ 5. Clone this repository and push it to your Aptible app:
 
     ```
     git clone https://github.com/aptible/elasticsearch-logstash-s3-backup.git
