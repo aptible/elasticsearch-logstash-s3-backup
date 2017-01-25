@@ -7,5 +7,8 @@ if [ -z "$1" ]; then
   exit
 fi
 
+# Normalize DATABASE_URL by removing the trailing slash.
+DATABASE_URL="${DATABASE_URL%/}"
+
 REPOSITORY_URL=${DATABASE_URL}/_snapshot/${REPOSITORY_NAME}
 curl -w "\n" -XPOST ${REPOSITORY_URL}/$1/_restore
