@@ -1,8 +1,10 @@
 #!/bin/bash
 
-NOW=$(date +"%m-%d-%Y %H-%M")
+function now() {
+  date +"%m-%d-%Y %H-%M"
+}
 
-echo "$NOW: backup-all-indexes.sh - Verifying required environment variables"
+echo "$(now): backup-all-indexes.sh - Verifying required environment variables"
 
 : ${DATABASE_URL:?"Error: DATABASE_URL environment variable not set"}
 : ${S3_BUCKET:?"Error: S3_BUCKET environment variable not set"}
@@ -36,7 +38,7 @@ backup_index ()
 
   grep -q SUCCESS <(curl -sS ${SNAPSHOT_URL})
   if [ $? -ne 0 ]; then
-    echo "$NOW: Scheduling snapshot."
+    echo "$(now): Scheduling snapshot."
     # If the snapshot exists but isn't in a success state, delete it so that we can try again.
     grep -qE "FAILED|PARTIAL|IN_PROGRESS" <(curl -sS ${SNAPSHOT_URL}) && curl -sS -XDELETE ${SNAPSHOT_URL}
     # Indexes have to be open for snapshots to work.
@@ -47,7 +49,7 @@ backup_index ()
       \"include_global_state\": false
     }" || return 1
 
-    echo "$NOW: Waiting for snapshot to finish..."
+    echo "$(now): Waiting for snapshot to finish..."
     timeout "${WAIT_SECONDS}" bash -c "until grep -q SUCCESS <(curl -sS ${SNAPSHOT_URL}); do sleep 1; done" || return 1
   fi
 
@@ -58,11 +60,11 @@ backup_index ()
 # Ensure that Elasticsearch has the cloud-aws plugin.
 grep -q $REPOSITORY_PLUGIN <(curl -sS ${DATABASE_URL}/_cat/plugins)
 if [ $? -ne 0 ]; then
-  echo "$NOW: Elasticsearch server does not have cloud-aws plugin installed. Exiting."
+  echo "$(now): Elasticsearch server does not have the ${REPOSITORY_PLUGIN} plugin installed. Exiting."
   exit 1
 fi
 
-echo "$NOW: Ensuring Elasticsearch snapshot repository ${REPOSITORY_NAME} exists..."
+echo "$(now): Ensuring Elasticsearch snapshot repository ${REPOSITORY_NAME} exists..."
 curl -w "\n" -sS -XPUT ${REPOSITORY_URL} -d "{
   \"type\": \"s3\",
   \"settings\": {
@@ -77,17 +79,17 @@ curl -w "\n" -sS -XPUT ${REPOSITORY_URL} -d "{
 }"
 
 CUTOFF_DATE=$(date --date="${MAX_DAYS_TO_KEEP} days ago" +"%Y.%m.%d")
-echo "Archiving all indexes with logs before ${CUTOFF_DATE}."
+echo "$(now) Archiving all indexes with logs before ${CUTOFF_DATE}."
 SUBSTITUTION='s/.*\(logstash-[0-9\.]\{10\}\).*/\1/'
 for index_name in $(curl -sS ${DATABASE_URL}/_cat/indices | grep logstash- | sed $SUBSTITUTION | sort); do
   if [[ "${index_name:9}" < "${CUTOFF_DATE}" ]]; then
-      echo "$NOW: Ensuring ${index_name} is archived..."
+    echo "$(now): Ensuring ${index_name} is archived..."
       backup_index ${index_name}
       if [ $? -eq 0 ]; then
-          echo "$NOW: ${index_name} archived."
+        echo "$(now): ${index_name} archived."
       else
-          echo "$NOW: ${index_name} archival failed."
+        echo "$(now): ${index_name} archival failed."
       fi
   fi
 done
-echo "$NOW: Finished archiving."
+echo "$(now): Finished archiving."
