@@ -14,11 +14,21 @@ echo "$(now): backup-all-indexes.sh - Verifying required environment variables"
 # Normalize DATABASE_URL by removing the trailing slash.
 DATABASE_URL="${DATABASE_URL%/}"
 
+# Set some defaults
 S3_REGION=${S3_REGION:-us-east-1}
 REPOSITORY_NAME=${REPOSITORY_NAME:-logstash_snapshots}
 WAIT_SECONDS=${WAIT_SECONDS:-1800}
 MAX_DAYS_TO_KEEP=${MAX_DAYS_TO_KEEP:-30}
 REPOSITORY_URL=${DATABASE_URL}/_snapshot/${REPOSITORY_NAME}
+
+# Ensure that we don't delete indices that are being logged. Using 1 should
+# actually be fine here as long as everyone's on the same timezone, but let's
+# be safe and require at least 2 days.
+if [[ "$MAX_DAYS_TO_KEEP" -lt 2 ]]; then
+  echo "$(now): MAX_DAYS_TO_KEEP must be an integer >= 2."
+  echo "$(now): Using lower values may break archiving."
+  exit 1
+fi
 
 ES_VERSION=$(curl -sS $DATABASE_URL?format=yaml | grep number | cut -d'"' -f2)
 ES_VERSION_COMPARED_TO_50=$(apk version -t "$ES_VERSION" "4.9")
