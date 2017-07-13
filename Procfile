@@ -1,1 +1,0 @@
-cron: /bin/bash /opt/app/src/run-cron.sh

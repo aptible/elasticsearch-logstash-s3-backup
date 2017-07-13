@@ -1,1 +1,1 @@
-CRON_SCHEDULE set -a && . /opt/app/src/app.env && /bin/bash /opt/app/src/backup-all-indexes.sh >> /var/log/cron.log 2>&1
+CRON_SCHEDULE /opt/app/src/backup-all-indexes.sh
