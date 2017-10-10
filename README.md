@@ -5,7 +5,9 @@ Elasticsearch database. Indexes named in the standard logstash convention
 (`logstash-YYYY.MM.DD`) are archived daily based on their age, keeping a
 configurable number of the most recent indexes live. Each index is backed
 up over HTTPS and encrypted using AWS server-side encryption to its own
-Elasticsearch snapshot in your S3 snapshot repository.
+Elasticsearch snapshot in your S3 snapshot repository. 
+
+Added new feature to backup multiple indices, added slack notification feature.
 
 ## Installation
 
@@ -73,6 +75,9 @@ Recommended setup for running as an app on Aptible:
      * `S3_BUCKET_BASE_PATH`: Destination path within bucket (Optional)
      * `S3_ACCESS_KEY_ID`: The access key you generated in step 3.
      * `S3_SECRET_ACCESS_KEY`: The secret key you generated in step 3.
+     * `INDEX_ARRAY`: array of indices, INDEX_ARRAY="logstash nginx", separated with white space 
+     * `SLACK_HOOK`: slack webhook url (optional)
+     * `SLACK_CHANNEL,SLACK_USER,SLACK_EMO`: optional variables for slack configuration
 
     You may also wish to override any of the following optional environment
     variables:
