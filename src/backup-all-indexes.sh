@@ -64,9 +64,15 @@ backup_index ()
   fi
 }
 
-delete_index()
+delete_index ()
+{
+  : ${1:?"Error: expected index name passed as parameter"}
+  local INDEX_NAME=$1
+  local SNAPSHOT_URL=${REPOSITORY_URL}/${INDEX_NAME}
+  local INDEX_URL=${DATABASE_URL}/${INDEX_NAME}
+
   echo "Deleting ${INDEX_NAME} from Elasticsearch."
-  curl -w "\n" -sS -XDELETE ${INDEX_URL}
+  echo curl -w "\n" -sS -XDELETE ${INDEX_URL}
 }
 
 # Ensure that Elasticsearch has the cloud-aws plugin.
@@ -90,8 +96,9 @@ curl -w "\n" -sS -XPUT ${REPOSITORY_URL} -d "{
   }
 }"
 ARCHIVE_CUTOFF_DATE=$(date --date="1 days ago" +"%Y.%m.%d") # why would we wait weeks to archive?
+echo "$(now) Archiving all indexes with logs before ${ARCHIVE_CUTOFF_DATE}."
 DELETE_CUTOFF_DATE=$(date --date="${MAX_DAYS_TO_KEEP} days ago" +"%Y.%m.%d")
-echo "$(now) Deleting all indexes with logs before ${CUTOFF_DATE}."
+echo "$(now) Deleting all indexes with logs before ${DELETE_CUTOFF_DATE}."
 SUBSTITUTION='s/.*\(logstash-[0-9\.]\{10\}\).*/\1/'
 for index_name in $(curl -sS ${DATABASE_URL}/_cat/indices | grep logstash- | sed $SUBSTITUTION | sort); do
   if [[ "${index_name:9}" < "${CUTOFF_DATE}" ]]; then
@@ -101,6 +108,9 @@ for index_name in $(curl -sS ${DATABASE_URL}/_cat/indices | grep logstash- | sed
         echo "$(now): ${index_name} archived."
       else
         echo "$(now): ${index_name} archival failed."
+      fi
+      if [[ "${index_name:9}" > "${DELETE_CUTOFF_DATA}" ]]; then
+        delete_index ${index_name}
       fi
   fi
 done
