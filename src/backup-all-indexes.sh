@@ -62,7 +62,9 @@ backup_index ()
     echo "$(now): Waiting for snapshot to finish..."
     timeout "${WAIT_SECONDS}" bash -c "until grep -q SUCCESS <(curl -sS ${SNAPSHOT_URL}); do sleep 1; done" || return 1
   fi
+}
 
+delete_index()
   echo "Deleting ${INDEX_NAME} from Elasticsearch."
   curl -w "\n" -sS -XDELETE ${INDEX_URL}
 }
@@ -87,9 +89,9 @@ curl -w "\n" -sS -XPUT ${REPOSITORY_URL} -d "{
     \"server_side_encryption\": true
   }
 }"
-
-CUTOFF_DATE=$(date --date="${MAX_DAYS_TO_KEEP} days ago" +"%Y.%m.%d")
-echo "$(now) Archiving all indexes with logs before ${CUTOFF_DATE}."
+ARCHIVE_CUTOFF_DATE=$(date --date="1 days ago" +"%Y.%m.%d") # why would we wait weeks to archive?
+DELETE_CUTOFF_DATE=$(date --date="${MAX_DAYS_TO_KEEP} days ago" +"%Y.%m.%d")
+echo "$(now) Deleting all indexes with logs before ${CUTOFF_DATE}."
 SUBSTITUTION='s/.*\(logstash-[0-9\.]\{10\}\).*/\1/'
 for index_name in $(curl -sS ${DATABASE_URL}/_cat/indices | grep logstash- | sed $SUBSTITUTION | sort); do
   if [[ "${index_name:9}" < "${CUTOFF_DATE}" ]]; then
