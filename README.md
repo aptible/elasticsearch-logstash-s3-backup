@@ -15,7 +15,7 @@ Recommended setup for running as an app on Aptible:
     database.
 
  2. Create an IAM user to run the backup and restore. Give your IAM user
-    permission to read/write from the bucket you created in step 2. The
+    permission to read/write from the bucket you created in step 1. The
     elasticsearch-cloud-aws plugin documentation has [instructions on setting
     up these permissions](https://github.com/elastic/elasticsearch-cloud-aws/tree/v2.5.1/#recommended-s3-permissions);
     adding the following as an inline custom policy should be sufficient
@@ -71,8 +71,8 @@ Recommended setup for running as an app on Aptible:
      * `DATABASE_URL`: Your Elasticsearch URL.
      * `S3_BUCKET`: Your S3 Bucket name.
      * `S3_BUCKET_BASE_PATH`: Destination path within bucket (Optional)
-     * `S3_ACCESS_KEY_ID`: The access key you generated in step 3.
-     * `S3_SECRET_ACCESS_KEY`: The secret key you generated in step 3.
+     * `S3_ACCESS_KEY_ID`: The access key you generated in step 2.
+     * `S3_SECRET_ACCESS_KEY`: The secret key you generated in step 2.
 
     You may also wish to override any of the following optional environment
     variables:
