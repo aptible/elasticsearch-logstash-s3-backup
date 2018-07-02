@@ -83,8 +83,6 @@ Recommended setup for running as an app on Aptible:
      * `CRON_SCHEDULE`: The schedule for your backups. Defaults to "0 2 * * *",
        which runs nightly at 2 A.M. Make sure to escape any asterisks when
        setting this variable from the command line to avoid shell expansion.
-     * `S3_REGION`: The region your Elasticsearch instance and S3 bucket live in.
-       Defaults to `us-east-1`.
      * `REPOSITORY_NAME`: The name of your Elasticsearch snapshot repo. This is
        the handle you can use in Elasticsearch to perform operations on your
        snapshot repo. Defaults to "logstash-snapshots".

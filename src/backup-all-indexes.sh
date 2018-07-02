@@ -15,7 +15,6 @@ echo "$(now): backup-all-indexes.sh - Verifying required environment variables"
 DATABASE_URL="${DATABASE_URL%/}"
 
 # Set some defaults
-S3_REGION=${S3_REGION:-us-east-1}
 REPOSITORY_NAME=${REPOSITORY_NAME:-logstash_snapshots}
 WAIT_SECONDS=${WAIT_SECONDS:-1800}
 MAX_DAYS_TO_KEEP=${MAX_DAYS_TO_KEEP:-30}
@@ -82,7 +81,6 @@ curl -w "\n" -sS -XPUT ${REPOSITORY_URL} -d "{
     \"base_path\": \"${S3_BUCKET_BASE_PATH}\",
     \"access_key\": \"${S3_ACCESS_KEY_ID}\",
     \"secret_key\": \"${S3_SECRET_ACCESS_KEY}\",
-    \"region\": \"${S3_REGION}\",
     \"protocol\": \"https\",
     \"server_side_encryption\": true
   }
