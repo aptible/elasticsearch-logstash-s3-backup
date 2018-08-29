@@ -53,7 +53,7 @@ backup_index ()
     # Indexes have to be open for snapshots to work.
     curl -sS -XPOST "${INDEX_URL}/_open"
 
-    curl --fail -w "\n" -sS -XPUT ${SNAPSHOT_URL} -d "{
+    curl -H "Content-Type: application/json" --fail -w "\n" -sS -XPUT ${SNAPSHOT_URL} -d "{
       \"indices\": \"${INDEX_NAME}\",
       \"include_global_state\": false
     }" || return 1
@@ -74,7 +74,7 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "$(now): Ensuring Elasticsearch snapshot repository ${REPOSITORY_NAME} exists..."
-curl -w "\n" -sS -XPUT ${REPOSITORY_URL} -d "{
+curl -H "Content-Type: application/json" -w "\n" -sS -XPUT ${REPOSITORY_URL} -d "{
   \"type\": \"s3\",
   \"settings\": {
     \"bucket\" : \"${S3_BUCKET}\",
