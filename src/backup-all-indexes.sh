@@ -20,6 +20,9 @@ WAIT_SECONDS=${WAIT_SECONDS:-1800}
 MAX_DAYS_TO_KEEP=${MAX_DAYS_TO_KEEP:-30}
 REPOSITORY_URL=${DATABASE_URL}/_snapshot/${REPOSITORY_NAME}
 
+# We need to be a able to allow self-signed certs for testing purposes
+CURL_OPTS=${CURL_OPTS:-}
+
 # Ensure that we don't delete indices that are being logged. Using 1 should
 # actually be fine here as long as everyone's on the same timezone, but let's
 # be safe and require at least 2 days.
@@ -29,7 +32,7 @@ if [[ "$MAX_DAYS_TO_KEEP" -lt 2 ]]; then
   exit 1
 fi
 
-ES_VERSION=$(curl -sS $DATABASE_URL?format=yaml | grep number | cut -d'"' -f2)
+ES_VERSION=$(curl "$CURL_OPTS" -sS $DATABASE_URL?format=yaml | grep number | cut -d'"' -f2)
 ES_VERSION_COMPARED_TO_50=$(apk version -t "$ES_VERSION" "4.9")
 
 if [ $ES_VERSION_COMPARED_TO_50 = '<' ]; then
@@ -45,36 +48,36 @@ backup_index ()
   local SNAPSHOT_URL=${REPOSITORY_URL}/${INDEX_NAME}
   local INDEX_URL=${DATABASE_URL}/${INDEX_NAME}
 
-  grep -q SUCCESS <(curl -sS ${SNAPSHOT_URL})
+  grep -q SUCCESS <(curl "$CURL_OPTS" -sS ${SNAPSHOT_URL})
   if [ $? -ne 0 ]; then
     echo "$(now): Scheduling snapshot."
     # If the snapshot exists but isn't in a success state, delete it so that we can try again.
-    grep -qE "FAILED|PARTIAL|IN_PROGRESS" <(curl -sS ${SNAPSHOT_URL}) && curl -sS -XDELETE ${SNAPSHOT_URL}
+    grep -qE "FAILED|PARTIAL|IN_PROGRESS" <(curl "$CURL_OPTS" -sS ${SNAPSHOT_URL}) && curl "$CURL_OPTS" -sS -XDELETE ${SNAPSHOT_URL}
     # Indexes have to be open for snapshots to work.
-    curl -sS -XPOST "${INDEX_URL}/_open"
+    curl "$CURL_OPTS" -sS -XPOST "${INDEX_URL}/_open"
 
-    curl -H "Content-Type: application/json" --fail -w "\n" -sS -XPUT ${SNAPSHOT_URL} -d "{
+    curl "$CURL_OPTS" -H "Content-Type: application/json" --fail -w "\n" -sS -XPUT ${SNAPSHOT_URL} -d "{
       \"indices\": \"${INDEX_NAME}\",
       \"include_global_state\": false
     }" || return 1
 
     echo "$(now): Waiting for snapshot to finish..."
-    timeout "${WAIT_SECONDS}" bash -c "until grep -q SUCCESS <(curl -sS ${SNAPSHOT_URL}); do sleep 1; done" || return 1
+    timeout "${WAIT_SECONDS}" bash -c "until grep -q SUCCESS <(curl "$CURL_OPTS" -sS ${SNAPSHOT_URL}); do sleep 1; done" || return 1
   fi
 
   echo "Deleting ${INDEX_NAME} from Elasticsearch."
-  curl -w "\n" -sS -XDELETE ${INDEX_URL}
+  curl "$CURL_OPTS" -w "\n" -sS -XDELETE ${INDEX_URL}
 }
 
 # Ensure that Elasticsearch has the cloud-aws plugin.
-grep -q $REPOSITORY_PLUGIN <(curl -sS ${DATABASE_URL}/_cat/plugins)
+grep -q $REPOSITORY_PLUGIN <(curl "$CURL_OPTS" -sS ${DATABASE_URL}/_cat/plugins)
 if [ $? -ne 0 ]; then
   echo "$(now): Elasticsearch server does not have the ${REPOSITORY_PLUGIN} plugin installed. Exiting."
   exit 1
 fi
 
 echo "$(now): Ensuring Elasticsearch snapshot repository ${REPOSITORY_NAME} exists..."
-curl -H "Content-Type: application/json" -w "\n" -sS -XPUT ${REPOSITORY_URL} -d "{
+curl "$CURL_OPTS" -H "Content-Type: application/json" -w "\n" -sS -XPUT ${REPOSITORY_URL} -d "{
   \"type\": \"s3\",
   \"settings\": {
     \"bucket\" : \"${S3_BUCKET}\",
@@ -89,7 +92,7 @@ curl -H "Content-Type: application/json" -w "\n" -sS -XPUT ${REPOSITORY_URL} -d 
 CUTOFF_DATE=$(date --date="${MAX_DAYS_TO_KEEP} days ago" +"%Y.%m.%d")
 echo "$(now) Archiving all indexes with logs before ${CUTOFF_DATE}."
 SUBSTITUTION='s/.*\(logstash-[0-9\.]\{10\}\).*/\1/'
-for index_name in $(curl -sS ${DATABASE_URL}/_cat/indices | grep logstash- | sed $SUBSTITUTION | sort); do
+for index_name in $(curl "$CURL_OPTS" -sS ${DATABASE_URL}/_cat/indices | grep logstash- | sed $SUBSTITUTION | sort); do
   if [[ "${index_name:9}" < "${CUTOFF_DATE}" ]]; then
     echo "$(now): Ensuring ${index_name} is archived..."
       backup_index ${index_name}
