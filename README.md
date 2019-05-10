@@ -139,6 +139,4 @@ bash-4.3# DATABASE_URL=https://some-other-elasticsearch ./restore-index.sh logst
 
 MIT License, see [LICENSE](LICENSE.md) for details.
 
-Copyright (c) 2015 [Aptible](https://www.aptible.com) and contributors.
-
-[<img src="https://s.gravatar.com/avatar/c386daf18778552e0d2f2442fd82144d?s=60" style="border-radius: 50%;" alt="@aaw" />](https://github.com/aaw)
+Copyright (c) 2019 [Aptible](https://www.aptible.com) and contributors.
