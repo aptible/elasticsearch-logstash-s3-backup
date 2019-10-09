@@ -61,6 +61,13 @@ backup_index ()
     echo "$(now): Waiting for snapshot to finish..."
     timeout "${WAIT_SECONDS}" bash -c "until grep -q SUCCESS <(curl -sS ${SNAPSHOT_URL}); do sleep 1; done" || return 1
   fi
+}
+
+delete_index ()
+{
+  : ${1:?"Error: expected index name passed as parameter"}
+  local INDEX_NAME=$1
+  local INDEX_URL=${DATABASE_URL}/${INDEX_NAME}
 
   echo "Deleting ${INDEX_NAME} from Elasticsearch."
   curl -w "\n" -sS -XDELETE ${INDEX_URL}
@@ -85,9 +92,10 @@ curl -H "Content-Type: application/json" -w "\n" -sS -XPUT ${REPOSITORY_URL} -d 
     \"server_side_encryption\": true
   }
 }"
-
-CUTOFF_DATE=$(date --date="${MAX_DAYS_TO_KEEP} days ago" +"%Y.%m.%d")
-echo "$(now) Archiving all indexes with logs before ${CUTOFF_DATE}."
+ARCHIVE_CUTOFF_DATE=$(date --date="2 days ago" +"%Y.%m.%d")
+echo "$(now) Archiving all indexes with logs before ${ARCHIVE_CUTOFF_DATE}."
+DELETE_CUTOFF_DATE=$(date --date="${MAX_DAYS_TO_KEEP} days ago" +"%Y.%m.%d")
+echo "$(now) Deleting all indexes with logs before ${DELETE_CUTOFF_DATE}."
 SUBSTITUTION='s/.*\(logstash-[0-9\.]\{10\}\).*/\1/'
 for index_name in $(curl -sS ${DATABASE_URL}/_cat/indices | grep logstash- | sed $SUBSTITUTION | sort); do
   if [[ "${index_name:9}" < "${CUTOFF_DATE}" ]]; then
@@ -97,6 +105,9 @@ for index_name in $(curl -sS ${DATABASE_URL}/_cat/indices | grep logstash- | sed
         echo "$(now): ${index_name} archived."
       else
         echo "$(now): ${index_name} archival failed."
+      fi
+      if [[ "${index_name:9}" > "${DELETE_CUTOFF_DATE}" ]]; then
+        delete_index ${index_name}
       fi
   fi
 done
